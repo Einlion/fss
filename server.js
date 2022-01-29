@@ -3,21 +3,21 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 const FormData = require('form-data')
 const fs = require('fs');
 const zip = require("jszip")
-const {encrypt, decrypt} = require("./utilities.js")
+const { encrypt, decrypt } = require("./utilities.js")
 
 let c = fs.readFileSync("./config.json");
 let config = JSON.parse(c);
 
 fastify.register(require('fastify-multipart'), {
     limits: {
-      fieldNameSize: 100,    // Max field name size in bytes
-      fieldSize: 100,        // Max field value size in bytes
-      fields: 10,            // Max number of non-file fields
-      fileSize: 1000000000,  // For multipart forms, the max file size in bytes
-      files: 1,              // Max number of file fields
-      headerPairs: 2000      // Max number of header key=>value pairs
+        fieldNameSize: 100,    // Max field name size in bytes
+        fieldSize: 100,        // Max field value size in bytes
+        fields: 10,            // Max number of non-file fields
+        fileSize: 1000000000,  // For multipart forms, the max file size in bytes
+        files: 1,              // Max number of file fields
+        headerPairs: 2000      // Max number of header key=>value pairs
     }
-  });
+});
 
 async function send(webhook_url, array_buffer, filename) {
     const data = encrypt(array_buffer);
@@ -44,7 +44,7 @@ fastify.get("/get", async (req, res) => {
     let resp = await fetch(url);
     let str = await resp.text()
     let array_buffer = decrypt(str);
-    res.headers({"Content-Disposition": "inline; filename=image.jpg"}).type("image/jpeg").send(Buffer.from(array_buffer));
+    res.headers({ "Content-Disposition": "inline; filename=image.jpg" }).type("image/jpeg").send(Buffer.from(array_buffer));
 })
 
 // fastify.get("/addpls", async (req, res) => {
@@ -81,7 +81,7 @@ fastify.post("/add", async (req, res) => {
     let buffer = await data.toBuffer()
     let filetype = await checktype.fileTypeFromBuffer(buffer);
     let hostname = config["hostname"]
-    if(filetype.ext != "zip") {
+    if (filetype.ext != "zip") {
         return "Only zip Files are allowed.";
     }
     let a = [];
@@ -91,20 +91,24 @@ fastify.post("/add", async (req, res) => {
         file = x.files[property]
         let s = await file.async("arraybuffer");
         let filetype = await checktype.fileTypeFromBuffer(s);
-        if(!filetype.mime.includes("image")) {
+        if (!filetype.mime.includes("image")) {
             return "Only Images are supported."
         }
 
-        let resolver = "https://" + hostname + "/get?url=" + await send(webhook_url, s, file.name); 
+        let resolver = "https://" + hostname + "/get?url=" + await send(webhook_url, s, file.name);
         a.push(resolver);
     }
 
     return JSON.stringify(a);
 })
 
+fastify.setNotFoundHandler(async (req, res) => {
+    return "uwu"
+})
+
 const start = async () => {
     try {
-        await fastify.listen(4000, "0.0.0.0")
+        await fastify.listen(4000)
     } catch (err) {
         fastify.log.error(err)
         process.exit(1)
